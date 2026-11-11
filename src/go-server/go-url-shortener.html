@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Go Project — URL Shortener</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light dark;
+
+    --paper:      #edefee;
+    --raised:     #f8f9f8;
+    --ink:        #0e2427;
+    --ink-soft:   #4c6467;
+    --rule:       #c4cdcc;
+    --rule-soft:  #dbe1e0;
+    --flow:       #00758d;
+    --accent:     #ce3262;
+
+    --serif: "IBM Plex Serif", Georgia, serif;
+    --sans:  "IBM Plex Sans", system-ui, sans-serif;
+    --mono:  "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:      #0f1e21;
+      --raised:     #182b2f;
+      --ink:        #e4eae9;
+      --ink-soft:   #9ab0b2;
+      --rule:       #334c50;
+      --rule-soft:  #263c40;
+      --flow:       #5cc7e0;
+      --accent:     #f4809c;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+  }
+
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 28px 120px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0 56px;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    padding: 72px 0 40px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .masthead h1 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 40px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 14px;
+  }
+
+  .standfirst {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  .roundtrip {
+    margin: 36px 0 0;
+    font-family: var(--mono);
+    font-size: 15px;
+    line-height: 2.1;
+    color: var(--ink);
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .roundtrip .verb   { color: var(--flow); font-weight: 500; }
+  .roundtrip .arrow  { color: var(--rule); padding: 0 14px; }
+  .roundtrip .result { color: var(--ink-soft); }
+
+  /* ---------- layout ---------- */
+
+  main { padding-top: 8px; }
+
+  .rail { display: none; }
+
+  section { padding: 44px 0 4px; }
+
+  section + section { border-top: 1px solid var(--rule-soft); }
+
+  h2 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.01em;
+    color: var(--flow);
+    margin: 0 0 18px;
+  }
+
+  h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 17px;
+    margin: 30px 0 8px;
+  }
+
+  p { max-width: 68ch; margin: 0 0 16px; }
+
+  ul { max-width: 68ch; padding-left: 20px; margin: 0 0 16px; }
+  li { margin-bottom: 7px; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--raised);
+    border: 1px solid var(--rule-soft);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+
+  em { font-style: italic; }
+
+  strong { font-weight: 500; }
+
+  a { color: var(--flow); }
+
+  /* ---------- tables ---------- */
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-family: var(--sans);
+    font-size: 15px;
+  }
+
+  th {
+    text-align: left;
+    font-weight: 600;
+    padding: 0 16px 9px 0;
+    border-bottom: 1px solid var(--ink);
+    vertical-align: bottom;
+  }
+
+  td {
+    padding: 13px 16px 13px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+
+  td:last-child, th:last-child { padding-right: 0; }
+
+  .route { white-space: nowrap; }
+  .route code { background: none; border: none; padding: 0; font-size: 14px; }
+  .route .m { color: var(--flow); font-weight: 500; }
+
+  /* ---------- architecture diagram ---------- */
+
+  .diagram {
+    margin: 26px 0 8px;
+    max-width: 640px;
+  }
+
+  .edge {
+    background: var(--raised);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 13px 18px;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+
+  .layer {
+    background: var(--raised);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--flow);
+    border-radius: 2px;
+    padding: 17px 20px 19px;
+  }
+
+  .layer-name {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+    margin: 0 0 7px;
+  }
+
+  .layer-what {
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 0 0 11px;
+    max-width: none;
+  }
+
+  .layer-knows {
+    font-family: var(--sans);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: none;
+  }
+
+  .layer-knows b { color: var(--accent); font-weight: 500; }
+
+  .layer code { background: var(--paper); }
+
+  .boundary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 11px 0 11px 20px;
+    position: relative;
+  }
+
+  .boundary::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    border-left: 1px dashed var(--flow);
+  }
+
+  .boundary-label {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .boundary-label b {
+    color: var(--flow);
+    font-weight: 600;
+  }
+
+  .store {
+    background: none;
+    border: 1px dashed var(--rule);
+    border-radius: 2px;
+    padding: 13px 18px;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+
+  .shortcut {
+    margin: 22px 0 0;
+    padding: 14px 18px;
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.55;
+    max-width: 640px;
+  }
+
+  .shortcut b { color: var(--accent); font-weight: 600; }
+
+  /* ---------- AI rules ---------- */
+
+  .rules { display: grid; gap: 22px; max-width: 68ch; }
+
+  .rule-block h3 { margin-top: 0; }
+
+  .rule-block.ok   h3 { color: var(--flow); }
+  .rule-block.stop h3 { color: var(--accent); }
+
+  .test-line {
+    margin: 26px 0 0;
+    padding-left: 18px;
+    border-left: 3px solid var(--ink);
+    font-size: 18px;
+    font-style: italic;
+    max-width: 60ch;
+  }
+
+  /* ---------- closing ---------- */
+
+  .closing {
+    margin-top: 8px;
+    font-size: 18px;
+    max-width: 62ch;
+  }
+
+  /* ---------- wide screens ---------- */
+
+  @media (min-width: 940px) {
+    .page { grid-template-columns: 178px 1fr; }
+    .masthead { grid-column: 1 / -1; }
+
+    .rail {
+      display: block;
+      position: sticky;
+      top: 44px;
+      align-self: start;
+      padding-top: 52px;
+    }
+
+    .rail ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      font-family: var(--sans);
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+
+    .rail li { margin-bottom: 11px; }
+
+    .rail a {
+      color: var(--ink-soft);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+
+    .rail a:hover { color: var(--flow); border-bottom-color: var(--flow); }
+  }
+
+  @media (max-width: 620px) {
+    body { font-size: 16px; }
+    .masthead h1 { font-size: 30px; }
+    .standfirst { font-size: 17px; }
+    .roundtrip { font-size: 13px; }
+    .page { padding: 0 20px 80px; }
+    table, th, td { font-size: 14px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  a:focus-visible, .rail a:focus-visible {
+    outline: 2px solid var(--flow);
+    outline-offset: 3px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <h1>URL shortener, in Go</h1>
+    <p class="standfirst">An HTTP service backed by a SQL database. Small enough to finish in a couple of sittings, and broad enough that once you have it working you have the shape of nearly every Go service you will ever write.</p>
+    <div class="roundtrip">
+      <span class="verb">POST</span> /<span class="arrow">→</span><span class="result">{ "code": "k3f9x2mq" }</span><br>
+      <span class="verb">GET</span>&nbsp; /k3f9x2mq<span class="arrow">→</span><span class="result">301 → https://the-original-url…</span>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Sections">
+    <ol>
+      <li><a href="#why">Why this one</a></li>
+      <li><a href="#api">The API</a></li>
+      <li><a href="#data">The data</a></li>
+      <li><a href="#shape">How it's shaped</a></li>
+      <li><a href="#types">Structs and interfaces</a></li>
+      <li><a href="#libs">What you can pull in</a></li>
+      <li><a href="#go">Go things to get right</a></li>
+      <li><a href="#ai">AI ground rules</a></li>
+      <li><a href="#tests">Tests</a></li>
+      <li><a href="#done">Done looks like</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <section id="why">
+      <h2>Why this one</h2>
+      <p>The domain is obvious, so none of your effort goes into figuring out what the thing is supposed to do. All of it goes into Go. You get request handling, routing, JSON, a database, connection lifecycle, error handling, and shutdown — which is most of what a service is.</p>
+      <p>This is the base. There will be follow-on exercises that build on this same codebase rather than starting over: a CLI against the same database, concurrency and background work, caching, middleware, gRPC, and a few others. Each one lands better if the foundation underneath it is something you wrote yourself, so it's worth being unhurried here.</p>
+    </section>
+
+    <section id="api">
+      <h2>The API</h2>
+      <table>
+        <thead>
+          <tr><th>Route</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="route"><code><span class="m">POST</span> /</code></td>
+            <td>Takes <code>{"url": "https://…"}</code>. Generates a code, saves it, returns the code and the full short URL. If the body includes an optional <code>code</code> field, use that as a vanity slug instead of generating one.</td>
+          </tr>
+          <tr>
+            <td class="route"><code><span class="m">GET</span> /{code}</code></td>
+            <td>Looks up the code and redirects <code>301</code> to the target. <code>404</code> if there's no such code.</td>
+          </tr>
+          <tr>
+            <td class="route"><code><span class="m">GET</span> /api/urls/{code}</code></td>
+            <td>Returns the record as JSON — target, created time, hit count, last accessed.</td>
+          </tr>
+          <tr>
+            <td class="route"><code><span class="m">DELETE</span> /api/urls/{code}</code></td>
+            <td>Removes it. <code>204</code> on success, <code>404</code> if it wasn't there.</td>
+          </tr>
+          <tr>
+            <td class="route"><code><span class="m">GET</span> /healthz</code></td>
+            <td>Returns <code>200</code>. No database call — this one answers whether the process is alive, not whether the database is.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Generated codes are eight random alphanumeric characters unless you have a reason to prefer something else. Vanity slugs will collide eventually, so decide what that response looks like.</p>
+    </section>
+
+    <section id="data">
+      <h2>The data</h2>
+      <p>One table. At minimum <code>code</code> as the primary key, plus <code>target_url</code>, <code>created_at</code>, <code>hit_count</code>, and <code>last_accessed_at</code>. Types and anything extra are yours to pick. Commit the schema as a plain <code>.sql</code> file rather than letting anything auto-migrate it.</p>
+      <p>Every redirect bumps <code>hit_count</code> and touches <code>last_accessed_at</code>, which means every read now carries a write. Doing it inline in the handler is the simple answer and it's a defensible one. Pushing it onto a channel and draining it in a background goroutine is the other answer, and it drags in questions about what happens to buffered writes at shutdown. Either is fine — pick one and write a paragraph in the README about why.</p>
+    </section>
+
+    <section id="shape">
+      <h2>How it's shaped</h2>
+      <p>Three layers, each one only talking to the one below it. The names are conventional rather than meaningful, so here is what they actually refer to:</p>
+
+      <div class="diagram">
+        <div class="edge">A browser, curl, whatever is calling you</div>
+
+        <div class="boundary">
+          <span class="boundary-label">crosses this line: <b>an HTTP request</b></span>
+        </div>
+
+        <div class="layer">
+          <p class="layer-name">handler</p>
+          <p class="layer-what">The only part that knows it's on the web. Reads the request, pulls out the path parameter or decodes the JSON body, hands plain Go values downward. Takes back a result or an error and turns it into a status code and a response body.</p>
+          <p class="layer-knows">Knows: HTTP verbs, status codes, JSON encoding. <b>Doesn't know: that a database exists.</b></p>
+        </div>
+
+        <div class="boundary">
+          <span class="boundary-label">crosses this line: <b>plain Go values</b> — a URL string, a code, a struct</span>
+        </div>
+
+        <div class="layer">
+          <p class="layer-name">service</p>
+          <p class="layer-what">The rules of the thing. Generates the code, validates that a URL is a URL, decides what happens when a vanity slug is already taken, decides whether a redirect counts as a hit. If you swapped HTTP for gRPC tomorrow, or Postgres for a text file, this layer would not change.</p>
+          <p class="layer-knows">Knows: what a short URL is and what the rules are. <b>Doesn't know: HTTP or SQL.</b></p>
+        </div>
+
+        <div class="boundary">
+          <span class="boundary-label">crosses this line: <b>"save this" / "find this one" / "delete it"</b></span>
+        </div>
+
+        <div class="layer">
+          <p class="layer-name">repository</p>
+          <p class="layer-what">The only part that speaks SQL. Takes a request for a record, runs the query, scans the rows into a struct, hands it back. Every query in the codebase lives in here and nowhere else.</p>
+          <p class="layer-knows">Knows: tables, columns, drivers, <code>sql.ErrNoRows</code>. <b>Doesn't know: HTTP, or why anyone wants this record.</b></p>
+        </div>
+
+        <div class="boundary">
+          <span class="boundary-label">crosses this line: <b>SQL</b></span>
+        </div>
+
+        <div class="store">MySQL or Postgres</div>
+      </div>
+
+      <div class="shortcut">
+        <b>The one shortcut to avoid:</b> a handler reaching straight for the database because it's three lines shorter that way. The moment that happens the layers stop meaning anything, and the interface work below stops being possible. If you find yourself wanting to, that's usually a sign the service layer is missing a method.
+      </div>
+    </section>
+
+    <section id="types">
+      <h2>Structs and interfaces</h2>
+      <p>Both are required, and the architecture above is what makes them natural rather than ceremonial.</p>
+
+      <h3>Structs</h3>
+      <p>Define a real <code>ShortURL</code> struct and pass it around. Not <code>map[string]any</code>, not a fistful of loose string parameters. Scan database rows into it, encode it to JSON out of it, and use struct tags to control the JSON field names. Your other structs come out of the layering: each layer's dependencies live on a struct, and its methods hang off that struct rather than floating as package-level functions with globals behind them.</p>
+
+      <h3>Interfaces</h3>
+      <p>The service layer must depend on an interface, not on your concrete Postgres or MySQL repository. Something along these lines:</p>
+      <p><code>type Store interface { Save(ctx, ShortURL) error; ByCode(ctx, string) (ShortURL, error); … }</code></p>
+      <p>The service takes a <code>Store</code>. <code>main</code> is what decides that the <code>Store</code> is in fact the SQL implementation, and wires it in. Define the interface in the package that <em>uses</em> it rather than the package that implements it — that's the Go convention and it's the opposite of what Java or C# would have you do.</p>
+      <p>Keep it small. If your interface has eleven methods you've described a class, not an interface. The payoff shows up in the test section: with the service depending on <code>Store</code>, you can hand it a fake and test the rules with no database running anywhere.</p>
+    </section>
+
+    <section id="libs">
+      <h2>What you can pull in</h2>
+      <table>
+        <thead>
+          <tr><th>For</th><th>Use</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Routing</td><td>Stdlib <code>net/http</code>. The Go 1.22+ <code>ServeMux</code> does method matching and path parameters, so there's no need for chi or gorilla here.</td></tr>
+          <tr><td>Database</td><td><code>database/sql</code> plus a MySQL or Postgres driver.</td></tr>
+          <tr><td>ORM</td><td>Fair game, but be able to say why you reached for it on any given query. Given your SQL, the interesting answer is probably a split: ORM for the boring CRUD, raw queries where you actually want control.</td></tr>
+          <tr><td>Everything else</td><td>Standard library.</td></tr>
+        </tbody>
+      </table>
+      <p>If you do use an ORM, write the hit-count update both ways and put a short note in the README on which one you'd ship and why. Worth actually looking at the SQL the ORM generates before deciding.</p>
+    </section>
+
+    <section id="go">
+      <h2>Go things to get right</h2>
+
+      <h3>Context</h3>
+      <p><code>context.Context</code> starts at the handler and travels all the way into every database call. No query without one. This is the mechanism by which a cancelled request stops doing work instead of finishing a query nobody is waiting for.</p>
+
+      <h3>Graceful shutdown</h3>
+      <p>Catch <code>SIGINT</code> and <code>SIGTERM</code> with <code>os/signal</code>, cancel a root context, let in-flight requests finish, then close the database pool and exit. This is the one that usually takes the longest, and it's the one that teaches the most — channels, context cancellation, and ordering all show up at once.</p>
+
+      <h3>Errors</h3>
+      <p>Wrap with <code>fmt.Errorf("doing the thing: %w", err)</code> as errors travel up. <code>log.Fatal</code> belongs in <code>main</code> and nowhere else. The bar is that a single log line tells you where it happened and why, without opening a debugger.</p>
+
+      <h3>Config</h3>
+      <p>Environment variables read with <code>os.Getenv</code>, sensible defaults, no config library, no connection strings in the source. <code>DATABASE_DSN</code>, <code>PORT</code>, and <code>BASE_URL</code> at minimum.</p>
+    </section>
+
+    <section id="ai">
+      <h2>AI ground rules</h2>
+      <p>The value here is entirely in having written it, so the line is drawn around composition rather than around looking things up.</p>
+
+      <div class="rules">
+        <div class="rule-block ok">
+          <h3>Go ahead</h3>
+          <ul>
+            <li>Syntax and names of things — how to declare a slice, what <code>%w</code> does, the signature of <code>http.HandlerFunc</code>, what <code>sql.ErrNoRows</code> is called.</li>
+            <li>Idiom questions — "what's the Go way to represent an optional value", "should this be a pointer receiver", "is this the normal way to structure a repository interface".</li>
+            <li>Ordinary editor autocomplete: symbol names, imports, method completion.</li>
+          </ul>
+        </div>
+
+        <div class="rule-block stop">
+          <h3>Not this</h3>
+          <ul>
+            <li>Asking for a function, a handler, a struct, or any block of logic to be written for you.</li>
+            <li>Pasting a requirement from this page and asking for an implementation.</li>
+            <li>AI autocomplete — Copilot, Cursor, Tabnine, anything that finishes more than a symbol name.</li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="test-line">If you can't explain a line in your own words without looking at it, you didn't write it.</p>
+    </section>
+
+    <section id="tests">
+      <h2>Tests</h2>
+      <p>At minimum, a table-driven test over the code generator: right length, right alphabet, no duplicates across a decent number of runs.</p>
+      <p>The one worth doing properly is the service layer against a fake <code>Store</code>. Write a struct that satisfies the interface and returns whatever you tell it to, hand it to the service, and test the vanity-slug collision path and the not-found path with no database involved. That's the moment the interface stops being a formality.</p>
+    </section>
+
+    <section id="done">
+      <h2>Done looks like</h2>
+      <ul>
+        <li>A server binary that starts, serves, and shuts down cleanly on Ctrl-C.</li>
+        <li><code>schema.sql</code> in the repo.</li>
+        <li>A README: how to run it, what env vars it needs, the sync-versus-background note on hit counting, and the ORM note if that applies.</li>
+        <li><code>go build ./...</code> and <code>go vet ./...</code> clean.</li>
+      </ul>
+      <p class="closing">Once this is standing up, the follow-on exercises attach to it directly, and by then most of the Go you need for real work will already be under your hands.</p>
+    </section>
+
+  </main>
+</div>
+</body>
+</html>
